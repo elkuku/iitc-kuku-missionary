@@ -1,4 +1,5 @@
 import {StateManager} from './StateManager'
+import {UmmPortal} from './types/UmmTypes'
 
 export class MissionManager {
 
@@ -117,6 +118,14 @@ export class MissionManager {
         state.currentMission = state.currentMission - 1
         this.stateManager.saveState(state)
         return { changed: true, message: `${state.missionSetName}\nCurrent active mission set to #${state.currentMission + 1}` }
+    }
+
+    reorderAllPortals = (newPortalsByMission: UmmPortal[][]): void => {
+        const state = this.stateManager.getState()
+        for (const [index, portals] of newPortalsByMission.entries()) {
+            state.missions[index].portals = portals
+        }
+        this.stateManager.saveState(state)
     }
 
     reorderAll = (newOrder: string[]): void => {

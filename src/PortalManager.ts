@@ -179,6 +179,13 @@ export class PortalManager {
         this.onStateChange?.()
     }
 
+    removePortal = (missionId: number, portalIndex: number): void => {
+        const state = this.stateManager.getState()
+        state.missions[missionId].portals.splice(portalIndex, 1)
+        this.stateManager.saveState(state)
+        this.onStateChange?.()
+    }
+
     reorderInMission = (missionId: number, newOrder: string[]): void => {
         const state = this.stateManager.getState()
         const mission = state.missions[missionId]

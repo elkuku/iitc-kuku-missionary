@@ -50,6 +50,7 @@ class Main implements Plugin.Class {
             portalManager,
             mapRenderer,
             notification,
+            waypointEditor,
         )
 
         portalManager.onStateChange = () => { mainDialog.refresh() }
@@ -85,7 +86,6 @@ class Main implements Plugin.Class {
 
         window.addHook('portalSelected', (event) => { portalManager.addPortalToCurrentMission(event) })
         window.addHook('portalDetailsUpdated', (event) => { portalManager.updateMissionPortalsDetails(event) })
-        window.addHook('portalDetailsUpdated', () => { waypointEditor.addWaypointEditorToPortal() })
         window.addHook('mapDataRefreshEnd', () => { portalManager.storeMissingData() })
 
         IITC.toolbox.addButton({

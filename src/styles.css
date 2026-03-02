@@ -64,49 +64,50 @@
 }
 .umm-edit-mission-set-details span.umm-error b { color: red; }
 
-/* Waypoint editor */
-#umm-waypoint-editor {
-    border-top: 1px solid #20a8b1;
-    border-bottom: 1px solid #20a8b1;
-    padding: 8px 5px;
-    margin-top: 10px;
+/* Inline waypoint editor (accordion inside portal item) */
+.umm-portal-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+.umm-waypoint-inline {
+    padding: 4px 6px 4px 24px;
+}
+.umm-inline-waypoint {
     display: flex;
     flex-direction: column;
-    width: 100%;
-    color: #ffce00;
-    box-sizing: border-box;
-    margin-bottom: 10px;
+    gap: 4px;
 }
-.umm-waypoint-editor-title { font-weight: bold; margin-bottom: 6px; }
-.umm-waypoint-select-container { display: flex; flex-direction: row; width: 100%; }
-.umm-waypoint-select-container > select {
-    background-color: #062844;
-    border: none;
+.umm-inline-action-select {
+    background: #062844;
     color: #ffce00;
-    height: 24px;
-}
-#umm-mission-select { width: 60px; }
-#umm-action-select { width: 100%; margin-left: 4px; }
-#umm-passphrase-container {
-    display: none;
-    flex-direction: column;
-    margin-top: 5px;
-}
-#umm-passphrase-container > span { margin-bottom: 3px; }
-#umm-passphrase-container > input,
-#umm-passphrase-container > textarea {
-    margin-bottom: 5px;
-    background-color: #062844;
-    min-height: 24px;
-    color: #ffce00;
-    font-family: Arial, sans-serif;
+    border: 1px solid #20a8b1;
     padding: 3px;
-    border: none;
+    width: 100%;
+}
+.umm-inline-passphrase {
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 2px;
+}
+.umm-inline-passphrase span {
+    font-size: 11px;
+    color: #ffce00;
+}
+.umm-inline-passphrase textarea,
+.umm-inline-passphrase input[type="text"] {
+    background: #062844;
+    color: #ffce00;
+    border: 1px solid #20a8b1;
+    padding: 3px;
+    font-family: inherit;
+    font-size: 12px;
+    width: 100%;
+    box-sizing: border-box;
     resize: vertical;
 }
 
 /* ===== Main Dialog Tabs ===== */
-#dialog-umm-main { background-color: rgb(8 48 78 / 90%); }
 
 .umm-tab-content {
     padding: 8px 4px;
@@ -129,14 +130,12 @@
     border-bottom-color: #062844;
 }
 #umm-tabs .ui-tabs-tab a {
-    color: #ffce00;
     padding: 4px 8px;
 }
 #umm-tabs .ui-tabs-panel {
     background: none;
-    border: 1px solid #20a8b1;
+    border: 1px solid silver;
     border-top: none;
-    color: #ffce00;
     padding: 6px;
 }
 
@@ -144,9 +143,7 @@
 #umm-tab-banner input,
 #umm-tab-banner textarea {
     width: 100%;
-    background-color: #062844;
-    color: #ffce00;
-    border: 1px solid #20a8b1;
+    border: 1px solid silver;
     padding: 3px;
     box-sizing: border-box;
     margin-bottom: 4px;
@@ -157,47 +154,102 @@
 .umm-error { color: #fff; display: none; margin-bottom: 3px; font-size: 11px; }
 .umm-error b { color: red; }
 
-/* Sortable lists */
+/* Missions + portals combined list */
 .umm-sortable-list {
     list-style: none;
     margin: 4px 0;
     padding: 0;
-    max-height: 220px;
+    max-height: 340px;
     overflow-y: auto;
     border: 1px solid #20a8b1;
 }
 
-.umm-sortable-item {
+/* Mission-level items */
+.umm-mission-item {
+    border-bottom: 1px solid #0a3d6b;
+    color: #ffce00;
+}
+.umm-mission-item:last-child { border-bottom: none; }
+.umm-mission-item.ui-sortable-helper { background: #062844; border: 1px solid #20a8b1; }
+
+.umm-mission-header {
     display: flex;
     align-items: center;
     padding: 4px 6px;
-    border-bottom: 1px solid #0a3d6b;
     cursor: pointer;
-    color: #ffce00;
 }
-.umm-sortable-item:last-child { border-bottom: none; }
-.umm-sortable-item:hover { background: rgb(32 168 177 / 20%); }
-.umm-sortable-item.ui-sortable-helper { background: #062844; border: 1px solid #20a8b1; }
+.umm-mission-header:hover { background: rgb(32 168 177 / 20%); }
 
-.umm-mission-active {
-    background: rgb(104 50 218 / 30%) !important;
+.umm-mission-active > .umm-mission-header {
+    background: rgb(104 50 218 / 30%);
     font-weight: bold;
 }
 
-.umm-drag-handle {
-    cursor: move;
-    margin-right: 6px;
-    color: #888;
-    flex-shrink: 0;
+/* Portal-level items */
+.umm-portals-sublist {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-top: 1px solid #0a3d6b;
 }
 
-.umm-mission-label,
-.umm-portal-label {
+.umm-portal-item {
+    border-bottom: 1px solid #062844;
+    color: #bdbdbd;
+    font-size: 12px;
+}
+.umm-portal-item:last-child { border-bottom: none; }
+.umm-portal-item.ui-sortable-helper { background: #062844; border: 1px solid #20a8b1; }
+
+.umm-portal-row {
+    display: flex;
+    align-items: center;
+    padding: 3px 6px 3px 0;
+}
+.umm-portal-row:hover { background: rgb(32 168 177 / 10%); }
+
+/* Drag handles */
+.umm-mission-drag-handle,
+.umm-portal-drag-handle {
+    cursor: move;
+    margin-right: 6px;
+    color: #666;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+/* Labels */
+.umm-mission-label {
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+.umm-portal-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.umm-portal-label:hover { text-decoration: underline; color: #ffce00; }
+
+/* Portal action buttons */
+.umm-portal-edit-btn,
+.umm-portal-delete-btn {
+    background: none;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0 2px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+.umm-portal-edit-btn:hover { color: #ffce00; }
+.umm-portal-edit-btn.umm-portal-edit-active { color: #20a8b1; }
+.umm-portal-delete-btn:hover { color: crimson; }
 
 .umm-badge {
     background: #20a8b1;
@@ -211,10 +263,10 @@
 }
 
 .umm-empty-state {
-    padding: 8px;
-    color: #888;
+    padding: 6px 6px 6px 24px;
+    color: #666;
     font-style: italic;
-    text-align: center;
+    font-size: 12px;
 }
 
 /* Mission controls */
@@ -254,9 +306,6 @@
     font-size: 12px;
 }
 
-/* Portals tab */
-.umm-portals-header { margin-bottom: 4px; }
-
 /* Tools tab */
 .umm-layer-label {
     margin-right: 10px;
@@ -278,3 +327,11 @@
     margin: 8px 0;
 }
 #umm-import-file { margin-top: 4px; }
+
+/* Waypoint empty state (shown when portal not in any mission) */
+.umm-waypoint-empty {
+    color: #888;
+    font-style: italic;
+    text-align: center;
+    padding: 30px 10px;
+}

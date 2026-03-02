@@ -3,6 +3,8 @@ import {MissionManager} from './MissionManager'
 import {PortalManager} from './PortalManager'
 import {MapRenderer} from './MapRenderer'
 import {Notification} from './Notification'
+import {WaypointEditor} from './WaypointEditor'
+import {UmmPortal} from './types/UmmTypes'
 
 const DIALOG_ID = 'umm-main'
 
@@ -14,6 +16,7 @@ export class MainDialog {
         private readonly portalManager: PortalManager,
         private readonly mapRenderer: MapRenderer,
         private readonly notification: Notification,
+        private readonly waypointEditor: WaypointEditor,
     ) {}
 
     showDialog = (): void => {
@@ -34,7 +37,6 @@ export class MainDialog {
         $('#umm-tabs').tabs()
         this.renderBannerTab()
         this.renderMissionsTab()
-        this.renderPortalsTab()
         this.renderToolsTab()
         this.bindDialogEvents()
     }
@@ -47,7 +49,6 @@ export class MainDialog {
     refresh = (): void => {
         if (!this.isOpen()) return
         this.renderMissionsTab()
-        this.renderPortalsTab()
         this.updateMissionModeButton()
     }
 
@@ -56,12 +57,10 @@ export class MainDialog {
             <ul>
                 <li><a href="#umm-tab-banner">Banner</a></li>
                 <li><a href="#umm-tab-missions">Missions</a></li>
-                <li><a href="#umm-tab-portals">Portals</a></li>
                 <li><a href="#umm-tab-tools">Tools</a></li>
             </ul>
             <div id="umm-tab-banner"></div>
             <div id="umm-tab-missions"></div>
-            <div id="umm-tab-portals"></div>
             <div id="umm-tab-tools"></div>
         </div>`
 
@@ -136,13 +135,45 @@ export class MainDialog {
         const isActive = this.portalManager.missionModeActive
 
         let missionItems = ''
-        for (const [index, mission] of state.missions.entries()) {
-            const isCurrentMission = index === state.currentMission
+        for (const [missionIndex, mission] of state.missions.entries()) {
+            const isCurrentMission = missionIndex === state.currentMission
             const activeClass = isCurrentMission ? ' umm-mission-active' : ''
-            missionItems += `<li class="umm-sortable-item${activeClass}" data-mission-id="${index}">
-                <span class="umm-drag-handle">&#9776;</span>
-                <span class="umm-mission-label">${index + 1}. ${mission.missionTitle || '(no title)'}</span>
-                <span class="umm-badge">${mission.portals.length}p</span>
+
+            let portalItems = ''
+            if (mission.portals.length === 0) {
+                portalItems = '<li class="umm-empty-state">No portals yet</li>'
+            } else {
+                for (const [portalIndex, portal] of mission.portals.entries()) {
+                    const typeBadge = portal.objective?.type ?? 'HACK_PORTAL'
+                    portalItems += `<li class="umm-portal-item"
+                        data-portal-index="${portalIndex}"
+                        data-orig-mission-id="${missionIndex}">
+                        <div class="umm-portal-row">
+                            <span class="umm-portal-drag-handle">&#9776;</span>
+                            <span class="umm-portal-label"
+                                data-lat="${portal.location.latitude}"
+                                data-lng="${portal.location.longitude}"
+                            >${portalIndex + 1}. ${portal.title}</span>
+                            <span class="umm-badge">${typeBadge.replace('_', ' ')}</span>
+                            <button class="umm-portal-edit-btn" title="Edit waypoint action"
+                                data-mission-id="${missionIndex}"
+                                data-portal-index="${portalIndex}">&#9998;</button>
+                            <button class="umm-portal-delete-btn" title="Remove from mission">&#x2715;</button>
+                        </div>
+                        <div class="umm-waypoint-inline" style="display:none;"></div>
+                    </li>`
+                }
+            }
+
+            missionItems += `<li class="umm-mission-item${activeClass}" data-mission-id="${missionIndex}">
+                <div class="umm-mission-header">
+                    <span class="umm-mission-drag-handle">&#9776;</span>
+                    <span class="umm-mission-label">${missionIndex + 1}. ${mission.missionTitle || '(no title)'}</span>
+                    <span class="umm-badge">${mission.portals.length}p</span>
+                </div>
+                <ul class="umm-portals-sublist" data-mission-id="${missionIndex}">
+                    ${portalItems}
+                </ul>
             </li>`
         }
 
@@ -167,29 +198,89 @@ export class MainDialog {
         </div>`
 
         $('#umm-tab-missions').html(html)
+        this.bindMissionsEvents()
+    }
 
+    private bindMissionsEvents = (): void => {
+        // Mission-level sortable
         $('#umm-missions-list').sortable({
-            handle: '.umm-drag-handle',
+            handle: '.umm-mission-drag-handle',
+            items: '> li.umm-mission-item',
             stop: () => {
-                const newOrder = $('#umm-missions-list').sortable('toArray', {
-                    attribute: 'data-mission-id',
-                })
+                const newOrder = $('#umm-missions-list > li.umm-mission-item').map(function () {
+                    return String($(this).data('mission-id'))
+                }).get()
                 this.missionManager.reorderAll(newOrder)
                 this.mapRenderer.drawMissions()
                 this.mapRenderer.refreshMissionNumbers()
                 this.renderMissionsTab()
-                this.renderPortalsTab()
             },
         })
 
-        $('#umm-missions-list li').on('click', (event) => {
-            const $item = $(event.currentTarget)
-            const missionId = parseInt(String($item.data('mission-id')))
+        // Portal-level sortable — connected across missions for cross-mission dragging
+        $('.umm-portals-sublist').each((_, element) => {
+            $(element).sortable({
+                handle: '.umm-portal-drag-handle',
+                items: '> li.umm-portal-item',
+                connectWith: '.umm-portals-sublist',
+                stop: () => {
+                    // stop fires once on the source list; DOM is already updated
+                    this.rebuildPortalsFromDom()
+                    this.mapRenderer.drawMissions()
+                    this.mapRenderer.refreshMissionNumbers()
+                    this.renderMissionsTab()
+                },
+            })
+        })
+
+        // Click mission header → set as active mission
+        $('.umm-mission-header').on('click', (event) => {
+            const missionId = parseInt(
+                String($(event.currentTarget).closest('li.umm-mission-item').data('mission-id')),
+            )
             this.missionManager.setCurrentMission(missionId)
             this.mapRenderer.drawMissions()
             this.mapRenderer.refreshMissionNumbers()
             this.renderMissionsTab()
-            this.renderPortalsTab()
+        })
+
+        // Click portal label → zoom map to portal
+        $('.umm-portal-label').on('click', (event) => {
+            event.stopPropagation()
+            const $label = $(event.currentTarget)
+            const lat = parseFloat(String($label.data('lat')))
+            const lng = parseFloat(String($label.data('lng')))
+            window.map.setView([lat, lng], 17)
+        })
+
+        // Click edit button → accordion-toggle inline waypoint editor
+        $('.umm-portal-edit-btn').on('click', (event) => {
+            event.stopPropagation()
+            const $button = $(event.currentTarget)
+            const $portalItem = $button.closest('li.umm-portal-item')
+            const $editor = $portalItem.find('.umm-waypoint-inline')
+            const isVisible = $editor.is(':visible')
+            $('.umm-waypoint-inline').hide()
+            $('.umm-portal-edit-btn').removeClass('umm-portal-edit-active')
+            if (!isVisible) {
+                const missionId = parseInt(String($button.data('mission-id')))
+                const portalIndex = parseInt(String($button.data('portal-index')))
+                $editor.show()
+                $button.addClass('umm-portal-edit-active')
+                this.waypointEditor.renderForPortal($editor, missionId, portalIndex)
+            }
+        })
+
+        // Delete portal from mission
+        $('.umm-portal-delete-btn').on('click', (event) => {
+            event.stopPropagation()
+            const $button = $(event.currentTarget)
+            const missionId = parseInt(String($button.closest('li.umm-portal-item').data('orig-mission-id')))
+            const portalIndex = parseInt(String($button.closest('li.umm-portal-item').data('portal-index')))
+            this.portalManager.removePortal(missionId, portalIndex)
+            this.mapRenderer.drawMissions()
+            this.mapRenderer.refreshMissionNumbers()
+            this.renderMissionsTab()
         })
 
         $('#umm-mission-mode-btn').on('click', () => {
@@ -208,7 +299,6 @@ export class MainDialog {
                 this.mapRenderer.drawMissions()
                 this.mapRenderer.refreshMissionNumbers()
                 this.renderMissionsTab()
-                this.renderPortalsTab()
             }
         })
 
@@ -219,54 +309,28 @@ export class MainDialog {
                 this.mapRenderer.drawMissions()
                 this.mapRenderer.refreshMissionNumbers()
                 this.renderMissionsTab()
-                this.renderPortalsTab()
             }
         })
     }
 
-    private renderPortalsTab = (): void => {
+    // Read the current DOM arrangement after a portal sort (same-mission or cross-mission)
+    // and persist the new order to state.
+    private rebuildPortalsFromDom = (): void => {
         const state = this.stateManager.getState()
-        const mission = state.missions[state.currentMission]
+        // Snapshot portals before overwriting so original lookups remain valid
+        const snapshot = state.missions.map(mission => [...mission.portals])
+        const newPortals: UmmPortal[][] = state.missions.map(() => [])
 
-        let portalItems = ''
-        if (mission.portals.length === 0) {
-            portalItems = '<li class="umm-empty-state">No portals in this mission yet.</li>'
-        } else {
-            for (const [portalIndex, portal] of mission.portals.entries()) {
-                const typeBadge = portal.objective?.type ?? 'HACK_PORTAL'
-                portalItems += `<li class="umm-sortable-item" data-portal-index="${portalIndex}">
-                    <span class="umm-drag-handle">&#9776;</span>
-                    <span class="umm-portal-label">${portalIndex + 1}. ${portal.title}</span>
-                    <span class="umm-badge">${typeBadge.replace('_', ' ')}</span>
-                </li>`
-            }
-        }
-
-        const html = `<div class="umm-tab-content">
-            <p class="umm-portals-header">
-                <b>Mission ${state.currentMission + 1}:</b> ${mission.missionTitle || '(no title)'}
-            </p>
-            <ul id="umm-portals-list" class="umm-sortable-list">
-                ${portalItems}
-            </ul>
-        </div>`
-
-        $('#umm-tab-portals').html(html)
-
-        if (mission.portals.length > 0) {
-            $('#umm-portals-list').sortable({
-                handle: '.umm-drag-handle',
-                stop: () => {
-                    const newOrder = $('#umm-portals-list').sortable('toArray', {
-                        attribute: 'data-portal-index',
-                    })
-                    this.portalManager.reorderInMission(state.currentMission, newOrder)
-                    this.mapRenderer.drawMissions()
-                    this.mapRenderer.refreshMissionNumbers()
-                    this.renderPortalsTab()
-                },
+        $('#umm-missions-list > li.umm-mission-item').each((_, missionElement) => {
+            const missionId = parseInt(String($(missionElement).data('mission-id')))
+            $(missionElement).find('> ul.umm-portals-sublist > li.umm-portal-item').each((_, portalElement) => {
+                const origMission = parseInt(String($(portalElement).data('orig-mission-id')))
+                const origIndex = parseInt(String($(portalElement).data('portal-index')))
+                newPortals[missionId].push(snapshot[origMission][origIndex])
             })
-        }
+        })
+
+        this.missionManager.reorderAllPortals(newPortals)
     }
 
     private renderToolsTab = (): void => {
@@ -451,7 +515,6 @@ export class MainDialog {
     }
 
     private bindDialogEvents = (): void => {
-        // Sync layer checkboxes when layers are added/removed externally
         window.map.on('layeradd', (event) => {
             const layerEvent = event as unknown as L.LeafletLayerEvent
             if (layerEvent.layer === this.mapRenderer.missionPaths) {
