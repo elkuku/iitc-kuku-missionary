@@ -1,5 +1,12 @@
 import * as Plugin from 'iitcpluginkit'
-import {DialogHelper} from './Helper/Dialog'
+
+import {StateManager} from './StateManager'
+import {MissionManager} from './MissionManager'
+import {PortalManager} from './PortalManager'
+import {MapRenderer} from './MapRenderer'
+import {Notification} from './Notification'
+import {WaypointEditor} from './WaypointEditor'
+import {MainDialog} from './MainDialog'
 
 // @ts-expect-error we don't want to import JSON files :(
 import plugin from '../plugin.json'
@@ -9,37 +16,85 @@ const PLUGIN_NAME = plugin.name.replace('IITC plugin: ', '') as string
 
 class Main implements Plugin.Class {
 
-    private dialogHelper: DialogHelper
-    private dialog?: JQuery
-
     init() {
         console.log(`${PLUGIN_NAME} - ${VERSION}`)
 
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require('./styles.css')
 
-        this.dialogHelper = new DialogHelper(PLUGIN_NAME, 'My Plugin')
+        $('body').append("<div class='umm-notification' style='display:none'></div>")
 
-        this.createButtons()
-    }
+        const stateManager = new StateManager()
+        const notification = new Notification()
 
-    private createButtons(): void {
-        IITC.toolbox.addButton({
-            label: 'My Plugin',
-            title: 'My new plugin [X]',
-            accessKey: 'X',
-            id: `btn-${PLUGIN_NAME}`,
-            action: this.showDialog
+        if (!stateManager.isInitialized()) {
+            stateManager.clearMissionData()
+        }
+
+        const state = stateManager.getState()
+        if (state.fileFormatVersion > StateManager.FILE_FORMAT_VERSION) {
+            alert('UMM: Your version is too old for the loaded data. Please update UMM.')
+            return
+        }
+
+        const migrated = stateManager.migrateState(state)
+        stateManager.saveState(migrated)
+
+        const mapRenderer = new MapRenderer(stateManager)
+        const missionManager = new MissionManager(stateManager)
+        const portalManager = new PortalManager(stateManager, missionManager, mapRenderer, notification)
+        const waypointEditor = new WaypointEditor(stateManager, notification)
+        const mainDialog = new MainDialog(
+            stateManager,
+            missionManager,
+            portalManager,
+            mapRenderer,
+            notification,
+        )
+
+        portalManager.onStateChange = () => { mainDialog.refresh() }
+
+        window.plugin.umm = {
+            missionModeActive: false,
+            notificationTimer: undefined,
+            ummMissionPaths: mapRenderer.missionPaths,
+            ummMissionNumbers: mapRenderer.missionNumbers,
+        }
+
+        window.addLayerGroup('UMM: Mission Paths', mapRenderer.missionPaths, true)
+        window.addLayerGroup('UMM: Mission Numbers', mapRenderer.missionNumbers, true)
+
+        mapRenderer.drawMissions()
+        mapRenderer.refreshMissionNumbers()
+
+        window.map.on('layeradd', (event) => {
+            const layerEvent = event as unknown as L.LeafletLayerEvent
+            if (layerEvent.layer === mapRenderer.missionNumbers) {
+                mapRenderer.addMissionNumbers()
+            }
+            mainDialog.syncLayerCheckboxes()
         })
-    }
 
-    private showDialog = (): void => {
-        if (this.dialog) return
+        window.map.on('layerremove', (event) => {
+            const layerEvent = event as unknown as L.LeafletLayerEvent
+            if (layerEvent.layer === mapRenderer.missionNumbers) {
+                mapRenderer.missionNumbers.clearLayers()
+            }
+            mainDialog.syncLayerCheckboxes()
+        })
 
-        this.dialog = this.dialogHelper.getDialog()
-        this.dialog.on('dialogclose', () => { this.dialog = undefined })
+        window.addHook('portalSelected', (event) => { portalManager.addPortalToCurrentMission(event) })
+        window.addHook('portalDetailsUpdated', (event) => { portalManager.updateMissionPortalsDetails(event) })
+        window.addHook('portalDetailsUpdated', () => { waypointEditor.addWaypointEditorToPortal() })
+        window.addHook('mapDataRefreshEnd', () => { portalManager.storeMissingData() })
 
-        this.dialogHelper.updateDialog()
+        IITC.toolbox.addButton({
+            label: 'UMM',
+            title: 'Ultimate Mission Maker',
+            accessKey: 'm',
+            id: `btn-${PLUGIN_NAME}`,
+            action: mainDialog.showDialog,
+        })
     }
 }
 
