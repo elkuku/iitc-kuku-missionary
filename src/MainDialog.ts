@@ -10,6 +10,8 @@ const DIALOG_ID = 'umm-main'
 
 export class MainDialog {
 
+    private collapsedMissions = new Set<number>()
+
     constructor(
         private readonly stateManager: StateManager,
         private readonly missionManager: MissionManager,
@@ -29,9 +31,10 @@ export class MainDialog {
         const html = this.buildDialogHtml()
         window.dialog({
             id: DIALOG_ID,
-            title: `Ultimate Mission Maker`,
+            title: 'KMissionary',
             html,
             width: 420,
+            position: { my: 'left top', at: 'left top', of: window },
         })
 
         $('#umm-tabs').tabs()
@@ -165,13 +168,14 @@ export class MainDialog {
                 }
             }
 
+            const isCollapsed = this.collapsedMissions.has(missionIndex)
             missionItems += `<li class="umm-mission-item${activeClass}" data-mission-id="${missionIndex}">
                 <div class="umm-mission-header">
-                    <span class="umm-mission-drag-handle">&#9776;</span>
+                    <span class="umm-mission-toggle">${isCollapsed ? '&#9654;' : '&#9660;'}</span>
                     <span class="umm-mission-label">${missionIndex + 1}. ${mission.missionTitle || '(no title)'}</span>
                     <span class="umm-badge">${mission.portals.length}p</span>
                 </div>
-                <ul class="umm-portals-sublist" data-mission-id="${missionIndex}">
+                <ul class="umm-portals-sublist" data-mission-id="${missionIndex}" style="display:${isCollapsed ? 'none' : 'block'}">
                     ${portalItems}
                 </ul>
             </li>`
@@ -202,21 +206,6 @@ export class MainDialog {
     }
 
     private bindMissionsEvents = (): void => {
-        // Mission-level sortable
-        $('#umm-missions-list').sortable({
-            handle: '.umm-mission-drag-handle',
-            items: '> li.umm-mission-item',
-            stop: () => {
-                const newOrder = $('#umm-missions-list > li.umm-mission-item').map(function () {
-                    return String($(this).data('mission-id'))
-                }).get()
-                this.missionManager.reorderAll(newOrder)
-                this.mapRenderer.drawMissions()
-                this.mapRenderer.refreshMissionNumbers()
-                this.renderMissionsTab()
-            },
-        })
-
         // Portal-level sortable — connected across missions for cross-mission dragging
         $('.umm-portals-sublist').each((_, element) => {
             $(element).sortable({
@@ -231,6 +220,24 @@ export class MainDialog {
                     this.renderMissionsTab()
                 },
             })
+        })
+
+        // Click toggle arrow → collapse/expand portals sublist
+        $('.umm-mission-toggle').on('click', (event) => {
+            event.stopPropagation()
+            const $toggle = $(event.currentTarget)
+            const $item = $toggle.closest('li.umm-mission-item')
+            const missionId = parseInt(String($item.data('mission-id')))
+            const $sublist = $item.find('> ul.umm-portals-sublist')
+            if (this.collapsedMissions.has(missionId)) {
+                this.collapsedMissions.delete(missionId)
+                $sublist.show()
+                $toggle.html('&#9660;')
+            } else {
+                this.collapsedMissions.add(missionId)
+                $sublist.hide()
+                $toggle.html('&#9654;')
+            }
         })
 
         // Click mission header → set as active mission
@@ -369,8 +376,9 @@ export class MainDialog {
 
             <hr>
             <p><b>About</b></p>
-            <p>UMM v${VERSION} &mdash;
-                <a href="https://umm.8bitnoise.rocks/" target="_blank">Documentation</a>
+            <p>KMissionary ${VERSION}</p>
+            <p> This is based on 
+                <a href="https://umm.8bitnoise.rocks/" target="_blank">Ultimate Mission Maker</a>
             </p>
             <p>Supported file format version: ${StateManager.FILE_FORMAT_VERSION} and below</p>
             <p>Missions: ${state.missions.length} &mdash; Total portals: ${state.missions.reduce((sum, mission) => sum + mission.portals.length, 0)}</p>

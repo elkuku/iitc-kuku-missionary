@@ -115,29 +115,6 @@
 }
 
 /* Tab overrides for IITC dark theme */
-#umm-tabs .ui-tabs-nav {
-    background: none;
-    border: none;
-    padding: 0;
-}
-#umm-tabs .ui-tabs-tab {
-    background: rgb(8 48 78 / 80%);
-    border: 1px solid #20a8b1;
-    margin-right: 2px;
-}
-#umm-tabs .ui-tabs-tab.ui-state-active {
-    background: #062844;
-    border-bottom-color: #062844;
-}
-#umm-tabs .ui-tabs-tab a {
-    padding: 4px 8px;
-}
-#umm-tabs .ui-tabs-panel {
-    background: none;
-    border: 1px solid silver;
-    border-top: none;
-    padding: 6px;
-}
 
 /* Banner tab form fields */
 #umm-tab-banner input,
@@ -159,9 +136,8 @@
     list-style: none;
     margin: 4px 0;
     padding: 0;
-    max-height: 340px;
     overflow-y: auto;
-    border: 1px solid #20a8b1;
+    border: 1px solid silver;
 }
 
 /* Mission-level items */
@@ -208,8 +184,16 @@
 }
 .umm-portal-row:hover { background: rgb(32 168 177 / 10%); }
 
+/* Collapse toggle */
+.umm-mission-toggle {
+    cursor: pointer;
+    margin-right: 4px;
+    font-size: 10px;
+    flex-shrink: 0;
+    user-select: none;
+}
+
 /* Drag handles */
-.umm-mission-drag-handle,
 .umm-portal-drag-handle {
     cursor: move;
     margin-right: 6px;

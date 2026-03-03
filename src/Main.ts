@@ -89,9 +89,8 @@ class Main implements Plugin.Class {
         window.addHook('mapDataRefreshEnd', () => { portalManager.storeMissingData() })
 
         IITC.toolbox.addButton({
-            label: 'UMM',
-            title: 'Ultimate Mission Maker',
-            accessKey: 'm',
+            label: 'KMissionary',
+            title: 'KMissionary',
             id: `btn-${PLUGIN_NAME}`,
             action: mainDialog.showDialog,
         })
