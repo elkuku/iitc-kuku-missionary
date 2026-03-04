@@ -186,7 +186,6 @@ export class MainDialog {
                 <button id="umm-mission-mode-btn" class="umm-dialog-button ${isActive ? 'umm-mission-mode-active' : ''}">
                     ${isActive ? 'Mission Mode: ON' : 'Mission Mode: OFF'}
                 </button>
-                <button id="umm-undo-btn" class="umm-dialog-button">Undo Portal</button>
             </div>
             <ul id="umm-missions-list" class="umm-sortable-list">
                 ${missionItems}
@@ -293,10 +292,6 @@ export class MainDialog {
         $('#umm-mission-mode-btn').on('click', () => {
             this.portalManager.toggleMissionMode()
             this.renderMissionsTab()
-        })
-
-        $('#umm-undo-btn').on('click', () => {
-            this.portalManager.undoPortal()
         })
 
         $('#umm-next-mission-btn').on('click', () => {

@@ -134,51 +134,6 @@ export class PortalManager {
         this.onStateChange?.()
     }
 
-    undoPortal = (): void => {
-        const state = this.stateManager.getState()
-
-        if (state.missions[state.currentMission].portals.length > 0) {
-            state.missions[state.currentMission].portals.pop()
-            this.stateManager.saveState(state)
-            this.mapRenderer.drawMissions()
-            this.mapRenderer.refreshMissionNumbers()
-
-            const remaining = state.missions[state.currentMission].portals
-            if (remaining.length > 0) {
-                const last = remaining.at(-1)!
-                window.map.setView([last.location.latitude, last.location.longitude])
-                renderPortalDetails(last.guid)
-            } else {
-                // eslint-disable-next-line unicorn/no-null
-                renderPortalDetails(null)
-                this.notification.show(`${state.missionSetName}\nNo portals left in mission.\nSelect start portal`)
-            }
-        } else if (state.currentMission === state.missions.length - 1 && state.currentMission !== 0) {
-            state.missions.pop()
-            this.stateManager.saveState(state)
-            this.missionManager.setCurrentMission(state.currentMission - 1)
-
-            const updated = this.stateManager.getState()
-            if (updated.missions[updated.currentMission].portals.length > 0) {
-                const last = updated.missions[updated.currentMission].portals.at(-1)!
-                window.map.setView([last.location.latitude, last.location.longitude])
-                renderPortalDetails(last.guid)
-            }
-
-            this.notification.show(
-                `${state.missionSetName}\nLast mission removed\nSwitched to previous mission ${state.currentMission + 1}\n`,
-            )
-        } else if (state.currentMission === state.missions.length - 1) {
-            this.notification.show(`${state.missionSetName}\nCan't undo\nAlready on last mission\n`)
-        } else {
-            this.notification.show(
-                `${state.missionSetName}\nCan't undo portal.\nCurrent mission contains no portals\nand isn't last mission in banner.`,
-            )
-        }
-
-        this.onStateChange?.()
-    }
-
     removePortal = (missionId: number, portalIndex: number): void => {
         const state = this.stateManager.getState()
         state.missions[missionId].portals.splice(portalIndex, 1)
