@@ -42,7 +42,7 @@ class Main implements Plugin.Class {
 
         const mapRenderer = new MapRenderer(stateManager)
         const missionManager = new MissionManager(stateManager)
-        const portalManager = new PortalManager(stateManager, missionManager, mapRenderer, notification)
+        const portalManager = new PortalManager(stateManager, mapRenderer, notification)
         const waypointEditor = new WaypointEditor(stateManager, notification)
         const mainDialog = new MainDialog(
             stateManager,

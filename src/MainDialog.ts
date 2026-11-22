@@ -69,9 +69,6 @@ export class MainDialog {
 
     private renderBannerTab = (): void => {
         const state = this.stateManager.getState()
-        const minLength = Math.max(1, state.missions.length)
-        const currentLength =
-            state.plannedBannerLength > 0 ? state.plannedBannerLength : minLength
 
         const html = `<div class="umm-tab-content umm-edit-mission-set-details">
             <label for="umm-mission-set-name"><b>Banner name</b> (max. 50)</label>
@@ -83,10 +80,6 @@ export class MainDialog {
             <span class="umm-error" id="umm-mission-set-description-error"><b>Error:</b> Enter a valid description</span>
             <textarea id="umm-mission-set-description" placeholder="Enter banner description" maxlength="200"
                 rows="3">${state.missionSetDescription ?? ''}</textarea>
-
-            <label for="umm-banner-length"><b>Planned banner length</b> (min. ${minLength})</label>
-            <span class="umm-error" id="umm-mission-planned-banner-length-error"><b>Error:</b> Enter a valid banner length</span>
-            <input id="umm-banner-length" type="number" min="${minLength}" value="${currentLength}">
 
             <label for="umm-title-format"><b>Title format</b></label>
             <span class="umm-error" id="umm-mission-title-format-error"><b>Error:</b> Enter a valid title format</span>
@@ -100,7 +93,7 @@ export class MainDialog {
         $('#umm-tab-banner').html(html)
         this.updateTitlePreview()
 
-        $('#umm-mission-set-name, #umm-mission-set-description, #umm-banner-length, #umm-title-format').on(
+        $('#umm-mission-set-name, #umm-mission-set-description, #umm-title-format').on(
             'input',
             () => { this.updateTitlePreview() },
         )
@@ -109,7 +102,6 @@ export class MainDialog {
             const saved = this.missionManager.saveBannerDetails(
                 String($('#umm-mission-set-name').val()),
                 String($('#umm-mission-set-description').val()),
-                parseInt(String($('#umm-banner-length').val())),
                 String($('#umm-title-format').val()),
             )
             if (saved) {
@@ -123,10 +115,10 @@ export class MainDialog {
     private updateTitlePreview = (): void => {
         const name = String($('#umm-mission-set-name').val())
         const format = String($('#umm-title-format').val())
-        const length = parseInt(String($('#umm-banner-length').val()))
+        const total = this.stateManager.getState().missions.length
 
-        if (name && format && !isNaN(length)) {
-            const preview = this.missionManager.generateTitle(1, length, name, format)
+        if (name && format) {
+            const preview = this.missionManager.generateTitle(1, total, name, format)
             $('#umm-mission-title-preview').text(preview)
         } else {
             $('#umm-mission-title-preview').text('Fill in all required fields')
@@ -191,12 +183,7 @@ export class MainDialog {
                 ${missionItems}
             </ul>
             <div class="umm-mission-nav">
-                <button id="umm-prev-mission-btn" class="umm-dialog-button">&#9664; Prev</button>
-                <span id="umm-active-mission-info">
-                    Mission ${state.currentMission + 1}/${state.missions.length}
-                    &mdash; ${state.missions[state.currentMission].portals.length} portals
-                </span>
-                <button id="umm-next-mission-btn" class="umm-dialog-button">Next &#9654;</button>
+                <button id="umm-new-mission-btn" class="umm-dialog-button">+ New Mission</button>
             </div>
         </div>`
 
@@ -294,24 +281,11 @@ export class MainDialog {
             this.renderMissionsTab()
         })
 
-        $('#umm-next-mission-btn').on('click', () => {
-            const result = this.missionManager.nextMission()
-            this.notification.show(result.message)
-            if (result.created) {
-                this.mapRenderer.drawMissions()
-                this.mapRenderer.refreshMissionNumbers()
-                this.renderMissionsTab()
-            }
-        })
-
-        $('#umm-prev-mission-btn').on('click', () => {
-            const result = this.missionManager.previousMission()
-            this.notification.show(result.message)
-            if (result.changed) {
-                this.mapRenderer.drawMissions()
-                this.mapRenderer.refreshMissionNumbers()
-                this.renderMissionsTab()
-            }
+        $('#umm-new-mission-btn').on('click', () => {
+            this.missionManager.addMission()
+            this.mapRenderer.drawMissions()
+            this.mapRenderer.refreshMissionNumbers()
+            this.renderMissionsTab()
         })
     }
 
@@ -488,9 +462,7 @@ export class MainDialog {
 
         const numMissionsStr = prompt(
             `Split into how many missions (1-${state.missions[0].portals.length})?\nRecommended: multiple of 6.`,
-            String(state.plannedBannerLength > 0 && state.plannedBannerLength <= state.missions[0].portals.length
-                ? state.plannedBannerLength
-                : state.missions[0].portals.length),
+            String(state.missions[0].portals.length),
         )
 
         if (numMissionsStr === null) return

@@ -43,7 +43,7 @@ export class MissionManager {
         for (const [index, mission] of state.missions.entries()) {
             mission.missionTitle = this.generateTitle(
                 index + 1,
-                state.plannedBannerLength,
+                state.missions.length,
                 state.missionSetName,
                 state.titleFormat,
             )
@@ -65,59 +65,17 @@ export class MissionManager {
         this.stateManager.saveState(state)
     }
 
-    nextMission = (): { created: boolean; message: string } => {
+    addMission = (): void => {
         const state = this.stateManager.getState()
-
-        if (state.missions[state.currentMission].portals.length === 0) {
-            return { created: false, message: `${state.missionSetName}\nCan't start new mission.\nCurrent mission is empty.` }
-        }
-
-        if (state.currentMission + 1 === state.missions.length) {
-            if (state.plannedBannerLength === 0) {
-                return { created: false, message: "Can't start new mission.\nPlease enter a valid banner length first" }
-            }
-
-            if (state.currentMission < state.plannedBannerLength - 1) {
-                state.missions[state.currentMission + 1] = {
-                    missionTitle: this.generateTitle(
-                        state.currentMission + 2,
-                        state.plannedBannerLength,
-                        state.missionSetName,
-                        state.titleFormat,
-                    ),
-                    missionDescription: state.missionSetDescription,
-                    portals: [],
-                }
-                state.currentMission = state.currentMission + 1
-                this.stateManager.saveState(state)
-                return { created: true, message: `${state.missionSetName}\nStart of mission #${state.currentMission + 1}\nSelect start portal.` }
-            }
-
-            return {
-                created: false,
-                message: `Can't start new mission.\nBanner length (${state.plannedBannerLength}) reached.`,
-            }
-        }
-
-        state.currentMission = state.currentMission + 1
+        const newIndex = state.missions.length
+        state.missions.push({
+            missionTitle: '',
+            missionDescription: state.missionSetDescription,
+            portals: [],
+        })
+        state.currentMission = newIndex
         this.stateManager.saveState(state)
-        return { created: true, message: `${state.missionSetName}\nCurrent active mission set to #${state.currentMission + 1}` }
-    }
-
-    previousMission = (): { changed: boolean; message: string } => {
-        const state = this.stateManager.getState()
-
-        if (state.missions[state.currentMission].portals.length === 0) {
-            return { changed: false, message: `${state.missionSetName}\nCan't change mission.\nCurrent mission is empty.` }
-        }
-
-        if (state.currentMission - 1 < 0) {
-            return { changed: false, message: "Can't go to previous mission.\nFirst mission in set" }
-        }
-
-        state.currentMission = state.currentMission - 1
-        this.stateManager.saveState(state)
-        return { changed: true, message: `${state.missionSetName}\nCurrent active mission set to #${state.currentMission + 1}` }
+        this.syncTitles()
     }
 
     reorderAllPortals = (newPortalsByMission: UmmPortal[][]): void => {
@@ -225,7 +183,6 @@ export class MissionManager {
     saveBannerDetails = (
         name: string,
         description: string,
-        plannedLength: number,
         format: string,
     ): boolean => {
         const state = this.stateManager.getState()
@@ -245,14 +202,6 @@ export class MissionManager {
         } else {
             valid = false
             $('#umm-mission-set-description-error').css('display', 'block')
-        }
-
-        if (plannedLength && !isNaN(plannedLength) && plannedLength >= state.missions.length) {
-            state.plannedBannerLength = plannedLength
-            $('#umm-mission-planned-banner-length-error').css('display', 'none')
-        } else {
-            valid = false
-            $('#umm-mission-planned-banner-length-error').css('display', 'block')
         }
 
         if (format) {

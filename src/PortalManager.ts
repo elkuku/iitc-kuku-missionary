@@ -1,5 +1,4 @@
 import {StateManager} from './StateManager'
-import {MissionManager} from './MissionManager'
 import {MapRenderer} from './MapRenderer'
 import {Notification} from './Notification'
 import {UmmPortal} from './types/UmmTypes'
@@ -14,7 +13,6 @@ export class PortalManager {
 
     constructor(
         private readonly stateManager: StateManager,
-        private readonly missionManager: MissionManager,
         private readonly mapRenderer: MapRenderer,
         private readonly notification: Notification,
     ) {}
@@ -25,7 +23,7 @@ export class PortalManager {
             $('#umm-mission-mode-btn').removeClass('umm-mission-mode-active')
         } else {
             const state = this.stateManager.getState()
-            if (!state.missionSetName || !state.missionSetDescription || state.plannedBannerLength === 0) {
+            if (!state.missionSetName || !state.missionSetDescription) {
                 this.notification.show('Mission mode inactive\nPlease enter mission data\nAnd try again.')
                 return
             }
